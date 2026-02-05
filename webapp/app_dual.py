@@ -1,20 +1,11 @@
 import os
-import sys
 from pathlib import Path
 import streamlit as st
 
-HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[1]
-
-if str(HERE) not in sys.path:
-    sys.path.insert(0, str(HERE))
-
 from matcher_multi import DualFoodMatcher
 
-PROJECT_ROOT = Path(os.getenv("BLS_PROJECT_ROOT", str(REPO_ROOT))).expanduser().resolve()
-
-DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[1]  # webapp/.. = project root
-PROJECT_ROOT = Path(os.getenv("BLS_PROJECT_ROOT", str(DEFAULT_PROJECT_ROOT))).expanduser().resolve()
+# Repo root is the parent of /webapp
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 st.set_page_config(page_title="BLS Dual Matcher", layout="wide")
 st.title("BLS 3.02 + BLS 4.0 Food Matcher")
@@ -36,14 +27,8 @@ def sort_candidates(cands):
 with st.sidebar:
     st.subheader("Status")
     st.write(m.get_stats())
-
-    if st.button("🔄 Reload matcher (re-read lookups)"):
-        st.cache_resource.clear()
-        st.rerun()
-
     show_candidates = st.checkbox("Show top candidates", value=True)
     topn = st.slider("How many candidates", 5, 50, 10)
-    show_candidates_for_lookup = st.checkbox("Show candidates even for lookup hits", value=True)
 
 food = st.text_input("Food item", placeholder="e.g., Alpro Haferdrink ungesüßt 1l")
 
@@ -65,28 +50,19 @@ if submitted and food.strip():
             st.write("**Name:**", result.get("name", ""))
 
             if result.get("rewritten_query"):
-                st.caption(f"LLM rewrite: {result['rewritten_query']}")
+                st.caption(f"LLM rewrite: \"{result['rewritten_query']}\"")
 
             st.divider()
             st.subheader("Confirm & Learn")
             if result.get("code"):
                 if st.button(f"✅ Confirm {label} and save", key=f"confirm_{dataset_key}"):
                     m.add_to_lookup(dataset_key, food, result["code"])
-                    st.success("Saved (lookup_user updated).")
+                    st.success("Saved to lookup_user.json")
 
             if show_candidates:
                 st.divider()
                 st.subheader("Top Candidates")
-
-                cands = result.get("candidates", []) or []
-
-                if (result.get("source") == "lookup") and show_candidates_for_lookup:
-                    try:
-                        cands = m.generate_candidates(dataset_key, food, top_k=max(50, topn))
-                    except Exception:
-                        pass
-
-                cands = sort_candidates(cands)
+                cands = sort_candidates(result.get("candidates", []) or [])
                 for i, c in enumerate(cands[:topn], 1):
                     st.write(f"{i}. **{c.get('code','')}** | {c.get('name','')} | score={c.get('score','')}")
 
