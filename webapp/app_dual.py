@@ -1,8 +1,17 @@
 import os
+import sys
 from pathlib import Path
 import streamlit as st
 
+HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parents[1]
+
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
 from matcher_multi import DualFoodMatcher
+
+PROJECT_ROOT = Path(os.getenv("BLS_PROJECT_ROOT", str(REPO_ROOT))).expanduser().resolve()
 
 DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[1]  # webapp/.. = project root
 PROJECT_ROOT = Path(os.getenv("BLS_PROJECT_ROOT", str(DEFAULT_PROJECT_ROOT))).expanduser().resolve()
